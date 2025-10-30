@@ -1,0 +1,81 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: go-web-app-deployment
+  labels:
+    app: go-web-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: go-web-app
+  template:
+    metadata:   
+      labels:
+        app: go-web-app
+    spec:
+      containers:
+      - name: go-web-app-container
+        image: avatar100/go-web-app-shiv:v1
+        ports:
+        - containerPort: 8080 
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: go-web-app-service
+  labels:
+    app: go-web-app
+spec:
+  selector:
+    app: go-web-app
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+    nodePort: 30080
+  type: NodePort
+
+---
+###***********ingress resource file starts here **********###
+#this is ingress req IC to create a LB
+
+#create a ingress with nginx classname 
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: go-web-app-ingress
+  annotations:
+
+#when user enters go-web-app.com just that it shall redirect to /home path of the app ***
+
+    nginx.ingress.kubernetes.io/rewrite-target: /home
+spec:
+
+#IR hey IC i have ingressClassName: nginx ,plz detect me 
+#IC:ok thats me  i will create a LB for this ingress resource
+#IC : user shall have a host go-web-app.com and access the app on path /
+
+#check how?
+# [root@centos10 go-web-app]# kubectl get ing 
+# NAME                 CLASS   HOSTS            ADDRESS           PORTS   AGE
+# go-web-app-ingress   nginx   go-web-app.com  192.168.177.135   80      24m
+
+##how to access it ?
+# http://go-web-app.com.local/home
+
+  ingressClassName: nginx
+  rules:
+    - host: "go-web-app.com"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: go-web-app-service
+                port:
+                  number: 80
+
